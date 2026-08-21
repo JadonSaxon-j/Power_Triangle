@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Power Triangle Trainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;900&family=Rajdhani:wght@500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --cave-dark:#070a14;
+    --panel-bg:rgba(8,14,26,0.74);
+    --panel-border:rgba(79,216,255,0.35);
+    --accent:#4fd8ff;
+    --accent-soft:rgba(79,216,255,0.18);
+    --accent-2:#ffcf4f;
+    --text:#eaf6ff;
+    --text-dim:#8fa6bd;
+    --error:#ff5d6c;
+    --success:#4dffa8;
+    --mono:'Share Tech Mono', monospace;
+    --display:'Orbitron', sans-serif;
+    --body-font:'Rajdhani', sans-serif;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0;padding:0;width:100%;height:100%;overflow-x:hidden;
+    background:var(--cave-dark);
+    font-family:var(--body-font);
+    color:var(--text);
+  }
+
+  canvas#bg{
+    position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;display:block;
+  }
+
+  .app{
+    position:relative;z-index:1;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    padding:28px 16px 60px;
+  }
+
+  .titlebar{
+    text-align:center;
+    margin-bottom:18px;
+  }
+  .titlebar h1{
+    font-family:var(--display);
+    font-weight:900;
+    font-size:clamp(22px,4.2vw,38px);
+    letter-spacing:1.5px;
+    margin:0 0 6px;
+    color:var(--text);
+    text-shadow:0 0 18px rgba(79,216,255,0.55), 0 0 3px rgba(79,216,255,0.9);
+  }
+  .titlebar p{
+    margin:0;
+    color:var(--text-dim);
+    font-size:14px;
+    letter-spacing:0.5px;
+    font-family:var(--mono);
+  }
+
+  .hud{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    justify-content:center;
+    margin-bottom:18px;
+  }
+  .hud-chip{
+    font-family:var(--mono);
+    font-size:12.5px;
+    letter-spacing:1px;
+    background:rgba(8,14,26,0.7);
+    border:1px solid var(--panel-border);
+    padding:7px 14px;
+    border-radius:6px;
+    color:var(--accent);
+    box-shadow:0 0 12px rgba(79,216,255,0.12) inset;
+  }
+  .hud-chip b{color:var(--text);font-weight:400;}
+
+  .modebar{
+    display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap;justify-content:center;
+  }
+  .mode-btn{
+    font-family:var(--body-font);
+    font-weight:600;
+    font-size:13px;
+    letter-spacing:0.4px;
+    padding:8px 16px;
+    border-radius:999px;
+    border:1px solid rgba(79,216,255,0.3);
+    background:rgba(8,14,26,0.55);
+    color:var(--text-dim);
+    cursor:pointer;
+    transition:all 0.18s ease;
+  }
+  .mode-btn:hover{color:var(--text);border-color:var(--accent);}
+  .mode-btn.active{
+    background:var(--accent-soft);
+    color:var(--accent);
+    border-color:var(--accent);
+    box-shadow:0 0 14px rgba(79,216,255,0.35);
+  }
+
+  .card{
+    width:100%;
+    max-width:560px;
+    background:var(--panel-bg);
+    border:1px solid var(--panel-border);
+    border-radius:16px;
+    padding:26px 24px 28px;
+    backdrop-filter:blur(10px);
+    -webkit-backdrop-filter:blur(10px);
+    box-shadow:0 0 0 1px rgba(79,216,255,0.05), 0 20px 60px rgba(0,0,0,0.55), 0 0 40px rgba(79,216,255,0.08);
+  }
+
+  .mode-label{
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:1.5px;
+    color:var(--accent-2);
+    text-align:center;
+    margin-bottom:14px;
+    text-transform:uppercase;
+  }
+
+  .triangle-wrap{
+    display:flex;justify-content:center;margin-bottom:18px;
+  }
+
+  .inputs-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px;
+    margin-bottom:18px;
+  }
+  .field{
+    display:flex;flex-direction:column;gap:6px;
+  }
+  .field label{
+    font-family:var(--mono);
+    font-size:12px;
+    color:var(--text-dim);
+    letter-spacing:0.5px;
+  }
+  .field input{
+    font-family:var(--mono);
+    font-size:17px;
+    padding:10px 12px;
+    border-radius:8px;
+    border:1px solid rgba(79,216,255,0.35);
+    background:rgba(0,0,0,0.35);
+    color:var(--text);
+    outline:none;
+    transition:border-color 0.15s, box-shadow 0.15s;
+  }
+  .field input:focus{
+    border-color:var(--accent);
+    box-shadow:0 0 0 3px rgba(79,216,255,0.25);
+  }
+  .field input.correct{border-color:var(--success);box-shadow:0 0 0 3px rgba(77,255,168,0.2);}
+  .field input.wrong{border-color:var(--error);box-shadow:0 0 0 3px rgba(255,93,108,0.2);}
+
+  .actions{
+    display:flex;gap:10px;justify-content:center;flex-wrap:wrap;
+  }
+  button.primary, button.secondary{
+    font-family:var(--body-font);
+    font-weight:700;
+    font-size:15px;
+    letter-spacing:0.4px;
+    padding:11px 26px;
+    border-radius:8px;
+    border:none;
+    cursor:pointer;
+    transition:transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  button.primary{
+    background:linear-gradient(135deg,#4fd8ff,#2b9fd6);
+    color:#04141c;
+    box-shadow:0 4px 18px rgba(79,216,255,0.4);
+  }
+  button.primary:hover{transform:translateY(-1px);box-shadow:0 6px 22px rgba(79,216,255,0.55);}
+  button.secondary{
+    background:rgba(255,255,255,0.08);
+    color:var(--text);
+    border:1px solid rgba(255,255,255,0.2);
+  }
+  button.secondary:hover{background:rgba(255,255,255,0.14);}
+  button:focus-visible{outline:2px solid var(--accent-2);outline-offset:2px;}
+
+  .feedback{
+    margin-top:18px;
+    padding:14px 16px;
+    border-radius:10px;
+    font-size:14.5px;
+    line-height:1.55;
+    display:none;
+  }
+  .feedback.show{display:block;}
+  .feedback.correct{
+    background:rgba(77,255,168,0.1);
+    border:1px solid rgba(77,255,168,0.4);
+    color:#c9ffe6;
+  }
+  .feedback.wrong{
+    background:rgba(255,93,108,0.08);
+    border:1px solid rgba(255,93,108,0.4);
+    color:#ffd9dc;
+  }
+  .feedback h3{
+    margin:0 0 8px;
+    font-family:var(--display);
+    font-size:14px;
+    letter-spacing:1px;
+  }
+  .feedback .steps{
+    font-family:var(--mono);
+    font-size:13px;
+    color:var(--text);
+    background:rgba(0,0,0,0.28);
+    padding:10px 12px;
+    border-radius:8px;
+    margin-top:8px;
+    white-space:pre-line;
+  }
+
+  @media (max-width:420px){
+    .inputs-grid{grid-template-columns:1fr;}
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    * { scroll-behavior:auto !important; }
+  }
+
+  .sr-note{
+    text-align:center;color:var(--text-dim);font-size:11.5px;margin-top:22px;font-family:var(--mono);opacity:0.7;
+  }
+</style>
+</head>
+<body>
+
+<canvas id="bg"></canvas>
+
+<div class="app">
+  <div class="titlebar">
+    <h1>POWER TRIANGLE TRAINER</h1>
+    <p>Real · Reactive · Apparent Power — solve the triangle</p>
+  </div>
+
+  <div class="hud">
+    <div class="hud-chip">STREAK <b id="streak">0</b></div>
+    <div class="hud-chip">SOLVED <b id="solved">0</b> / <b id="attempted">0</b></div>
+  </div>
+
+  <div class="modebar" id="modebar">
+    <button class="mode-btn active" data-mode="mixed">Mixed</button>
+    <button class="mode-btn" data-mode="1">Mode 1: Find Side + PF</button>
+    <button class="mode-btn" data-mode="2">Mode 2: Find Q &amp; S</button>
+  </div>
+
+  <div class="card">
+    <div class="mode-label" id="modeLabel">MODE 1 — GIVEN P &amp; Q</div>
+
+    <div class="triangle-wrap">
+      <svg id="triangleSvg" width="320" height="220" viewBox="0 0 320 220"></svg>
+    </div>
+
+    <div class="inputs-grid" id="inputsGrid"></div>
+
+    <div class="actions">
+      <button class="primary" id="checkBtn">Check Answer</button>
+      <button class="secondary" id="nextBtn" style="display:none;">Next Question</button>
+    </div>
+
+    <div class="feedback" id="feedback"></div>
+  </div>
+
+  <p class="sr-note">Values are randomly generated (100–1000 kW range) each round.</p>
+</div>
+
+<script>
+/* =========================================================
+   BACKGROUND ANIMATION ENGINE
+   Voxel-inspired mining <-> farming day/night loop
+   ========================================================= */
+(function(){
+  const canvas = document.getElementById('bg');
+  const ctx = canvas.getContext('2d');
+  let W = 0, H = 0, DPR = Math.min(window.devicePixelRatio || 1, 2);
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function resize(){
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = W * DPR; canvas.height = H * DPR;
+    canvas.style.width = W+'px'; canvas.style.height = H+'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    buildCaveWall();
+    buildTrees();
+  }
+  window.addEventListener('resize', resize);
+
+  // ---- timing ----
+  const CAVE_MS = 16000, TRANS_MS = 2400, SURF_MS = 16000, TRANS2_MS = 2400;
+  const TOTAL = CAVE_MS + TRANS_MS + SURF_MS + TRANS2_MS;
+  const T0=0, T1=CAVE_MS, T2=T1+TRANS_MS, T3=T2+SURF_MS, T4=T3+TRANS2_MS;
+  const start = performance.now();
+
+  // ---- particle pool ----
+  let particles = [];
+  function spawn(x,y,count,colors,opts){
+    opts = opts||{};
+    for(let i=0;i<count;i++){
+      const ang = Math.random()*Math.PI*2;
+      const spd = (opts.speed||1)*(0.5+Math.random());
+      particles.push({
+        x,y,
+        vx: Math.cos(ang)*spd*(opts.spread!==undefined?opts.spread:1),
+        vy: Math.sin(ang)*spd - (opts.upBias||0),
+        life:0, maxLife: opts.life || (600+Math.random()*400),
+        size: (opts.size||3)+Math.random()*2,
+        color: colors[(Math.random()*colors.length)|0],
+        grav: opts.grav!==undefined?opts.grav:0.0009
+      });
+    }
+  }
+  function updateParticles(dt){
+    for(let i=particles.length-1;i>=0;i--){
+      const p = particles[i];
+      p.life += dt;
+      if(p.life>p.maxLife){ particles.splice(i,1); continue; }
+      p.vy += p.grav*dt;
+      p.x += p.vx*dt*0.06;
+      p.y += p.vy*dt*0.06;
+    }
+  }
+  function drawParticles(){
+    for(const p of particles){
+      const t = 1-(p.life/p.maxLife);
+      ctx.globalAlpha = Math.max(t,0);
+      ctx.fillStyle = p.color;
+      ctx.fillRect(p.x-p.size/2, p.y-p.size/2, p.size, p.size);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ---- cave wall texture (precomputed) ----
+  let caveBlocks = [];
+  function buildCaveWall(){
+    caveBlocks = [];
+    const bw=34, bh=28;
+    const cols = Math.ceil(W/bw)+1, rows = Math.ceil(H*0.62/bh)+1;
+    const palette = ['#232a3d','#1d2333','#282f44','#1a2030','#2b3348'];
+    for(let r=0;r<rows;r++){
+      for(let c=0;c<cols;c++){
+        caveBlocks.push({
+          x:c*bw + (r%2? bw/2:0), y:r*bh,
+          w:bw-2, h:bh-2,
+          color: palette[(Math.random()*palette.length)|0]
+        });
+      }
+    }
+  }
+
+  // ---- trees (surface) ----
+  let trees = [];
+  function buildTrees(){
+    trees = [];
+    const n = Math.max(3, Math.floor(W/260));
+    for(let i=0;i<n;i++){
+      trees.push({
+        x: (i+0.5)*(W/n) + (Math.random()*60-30),
+        scale: 0.8+Math.random()*0.5,
+        sway: Math.random()*Math.PI*2
+      });
+    }
+  }
+
+  // ---- crops (surface) ----
+  const cropCount = 6;
+
+  // ================= CAVE SCENE =================
+  const torches = [0.16, 0.5, 0.84];
+  let miningCycleLen = 2200;
+
+  function drawCaveBackground(alphaLayerT){
+    // sky/back gradient
+    const g = ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'#050810');
+    g.addColorStop(0.6,'#0a1120');
+    g.addColorStop(1,'#141b2c');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,H);
+
+    // stone wall blocks (top 62%)
+    for(const b of caveBlocks){
+      ctx.fillStyle = b.color;
+      ctx.fillRect(b.x,b.y,b.w,b.h);
+    }
+    // vignette
+    const vg = ctx.createRadialGradient(W/2,H*0.4,H*0.15,W/2,H*0.4,H*0.9);
+    vg.addColorStop(0,'rgba(0,0,0,0)');
+    vg.addColorStop(1,'rgba(0,0,0,0.55)');
+    ctx.fillStyle = vg;
+    ctx.fillRect(0,0,W,H);
+
+    // floor
+    const floorY = H*0.72;
+    const fg = ctx.createLinearGradient(0,floorY,0,H);
+    fg.addColorStop(0,'#0d1320');
+    fg.addColorStop(1,'#05070c');
+    ctx.fillStyle = fg;
+    ctx.fillRect(0,floorY,W,H-floorY);
+  }
+
+  function drawTorch(x, t){
+    const y = H*0.34;
+    const flick = Math.sin(t*0.012 + x)*0.15 + Math.sin(t*0.027+x*3)*0.1;
+    // bracket
+    ctx.fillStyle = '#3a2a1c';
+    ctx.fillRect(x-3, y, 6, 22);
+    // flame glow
+    const glowR = 46 + flick*10;
+    const rg = ctx.createRadialGradient(x,y-6,2,x,y-6,glowR);
+    rg.addColorStop(0,'rgba(255,190,110,0.85)');
+    rg.addColorStop(0.4,'rgba(255,140,60,0.35)');
+    rg.addColorStop(1,'rgba(255,140,60,0)');
+    ctx.fillStyle = rg;
+    ctx.fillRect(x-glowR,y-6-glowR,glowR*2,glowR*2);
+    // flame body
+    ctx.fillStyle = `rgba(255,${170+flick*40|0},80,0.95)`;
+    ctx.beginPath();
+    ctx.moveTo(x, y-24-flick*6);
+    ctx.quadraticCurveTo(x+8, y-12, x, y-2);
+    ctx.quadraticCurveTo(x-8, y-12, x, y-24-flick*6);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(255,240,180,0.9)';
+    ctx.beginPath();
+    ctx.ellipse(x, y-10, 3.2, 6, 0,0,Math.PI*2);
+    ctx.fill();
+    // embers
+    if(Math.random()<0.15){
+      spawn(x+ (Math.random()*6-3), y-16, 1, ['#ffcf7a','#ff9d42'], {speed:0.6, upBias:0.9, grav:-0.0006, life:900, size:2});
+    }
+  }
+
+  // crystal ore + miner character
+  function drawCaveScene(t){
+    drawCaveBackground();
+    for(const tx of torches) drawTorch(tx*W, t);
+
+    const floorY = H*0.72;
+    const crystalX = W*0.94, crystalY = floorY - 26;
+    const cyclePos = (t % miningCycleLen)/miningCycleLen; // 0..1
+    const shatterPoint = 0.82;
+    const crystalAlive = cyclePos < shatterPoint;
+
+    // crystal
+    if(crystalAlive){
+      const pulse = 0.5+0.5*Math.sin(t*0.006);
+      ctx.save();
+      ctx.shadowColor = 'rgba(79,216,255,0.9)';
+      ctx.shadowBlur = 18+pulse*10;
+      ctx.fillStyle = '#3fd0ff';
+      ctx.beginPath();
+      ctx.moveTo(crystalX, crystalY-22);
+      ctx.lineTo(crystalX+16, crystalY-4);
+      ctx.lineTo(crystalX+8, crystalY+16);
+      ctx.lineTo(crystalX-8, crystalY+16);
+      ctx.lineTo(crystalX-16, crystalY-4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,0.55)';
+      ctx.beginPath();
+      ctx.moveTo(crystalX, crystalY-22);
+      ctx.lineTo(crystalX+6, crystalY-6);
+      ctx.lineTo(crystalX-4, crystalY-2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    } else if(cyclePos > shatterPoint && cyclePos < shatterPoint+0.03){
+      spawn(crystalX, crystalY, 14, ['#4fd8ff','#bff2ff','#2b9fd6'], {speed:2.4, upBias:0.6, life:700, size:3});
+    }
+
+    // miner character (to the left of crystal)
+    const charX = crystalX - 46, charY = floorY;
+    const swing = Math.sin(t*0.006*Math.PI) ;
+    drawMiner(charX, charY, swing, cyclePos, shatterPoint);
+  }
+
+  function drawMiner(x, groundY, swing, cyclePos, shatterPoint){
+    const armAngle = Math.max(0, Math.sin(cyclePos*Math.PI*2*3))*0.9; // swings a pickaxe rhythmically
+    ctx.save();
+    ctx.translate(x, groundY);
+
+    // legs
+    ctx.fillStyle = '#2e3648';
+    ctx.fillRect(-9,-30,7,30);
+    ctx.fillRect(2,-30,7,30);
+
+    // torso (overalls)
+    ctx.fillStyle = '#c9782f';
+    ctx.fillRect(-11,-58,22,30);
+    ctx.fillStyle = '#a5601f';
+    ctx.fillRect(-11,-40,22,6);
+
+    // back arm (static)
+    ctx.fillStyle = '#3a4257';
+    ctx.fillRect(6,-56,6,20);
+
+    // head
+    ctx.fillStyle = '#e8b98a';
+    ctx.fillRect(-8,-74,16,16);
+    // helmet
+    ctx.fillStyle = '#4a5164';
+    ctx.fillRect(-9,-78,18,8);
+    // headlamp
+    const lampOn = 0.6+0.4*Math.sin(performance.now()*0.01);
+    ctx.fillStyle = `rgba(255,240,150,${lampOn})`;
+    ctx.fillRect(-2,-75,4,4);
+
+    // swinging arm + pickaxe
+    ctx.save();
+    ctx.translate(-9,-54);
+    ctx.rotate(-armAngle*1.4 + 0.3);
+    ctx.fillStyle = '#3a4257';
+    ctx.fillRect(-3,0,6,20);
+    // pickaxe
+    ctx.save();
+    ctx.translate(0,20);
+    ctx.rotate(-0.4);
+    ctx.fillStyle = '#8a5a2c';
+    ctx.fillRect(-2,0,4,20);
+    ctx.fillStyle = '#9aa4b5';
+    ctx.fillRect(-12,-4,24,5);
+    ctx.restore();
+    ctx.restore();
+
+    ctx.restore();
+  }
+
+  // ================= SURFACE SCENE =================
+  function skyColorAt(progress){
+    // progress 0 (start, bright sunset) -> 1 (end, deep dusk)
+    const stops = [
+      {p:0.00, c:['#ffb26b','#ff7b54','#7a3d8a']},
+      {p:0.45, c:['#ff9d6b','#e0567a','#4a2d6e']},
+      {p:0.75, c:['#7a4a8a','#3d2d6e','#171233']},
+      {p:1.00, c:['#2a1f4a','#171233','#070a14']}
+    ];
+    let a=stops[0], b=stops[stops.length-1];
+    for(let i=0;i<stops.length-1;i++){
+      if(progress>=stops[i].p && progress<=stops[i+1].p){ a=stops[i]; b=stops[i+1]; break; }
+    }
+    const span = (b.p-a.p)||1;
+    const lp = (progress-a.p)/span;
+    function lerpColor(c1,c2,t){
+      const p1=hexToRgb(c1), p2=hexToRgb(c2);
+      return `rgb(${Math.round(p1.r+(p2.r-p1.r)*t)},${Math.round(p1.g+(p2.g-p1.g)*t)},${Math.round(p1.b+(p2.b-p1.b)*t)})`;
+    }
+    return [lerpColor(a.c[0],b.c[0],lp), lerpColor(a.c[1],b.c[1],lp), lerpColor(a.c[2],b.c[2],lp)];
+  }
+  function hexToRgb(hex){
+    const v = parseInt(hex.slice(1),16);
+    return {r:(v>>16)&255,g:(v>>8)&255,b:v&255};
+  }
+
+  function drawSurfaceScene(t, progress){
+    const colors = skyColorAt(progress);
+    const g = ctx.createLinearGradient(0,0,0,H*0.75);
+    g.addColorStop(0,colors[0]);
+    g.addColorStop(0.55,colors[1]);
+    g.addColorStop(1,colors[2]);
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,H*0.75);
+
+    // sun
+    const sunX = W*0.15 + progress*W*0.7;
+    const sunY = H*0.62 - Math.sin(progress*Math.PI)*H*0.32;
+    const sunGlow = ctx.createRadialGradient(sunX,sunY,4,sunX,sunY,90);
+    sunGlow.addColorStop(0,'rgba(255,230,150,0.9)');
+    sunGlow.addColorStop(0.5,'rgba(255,150,90,0.35)');
+    sunGlow.addColorStop(1,'rgba(255,150,90,0)');
+    ctx.fillStyle = sunGlow;
+    ctx.fillRect(sunX-90,sunY-90,180,180);
+    ctx.fillStyle = '#fff2c4';
+    ctx.beginPath(); ctx.arc(sunX,sunY,20,0,Math.PI*2); ctx.fill();
+
+    // clouds
+    for(let i=0;i<3;i++){
+      const cx = ((t*0.008 + i*220) % (W+200)) - 100;
+      const cy = H*0.14 + i*30;
+      ctx.fillStyle = 'rgba(255,255,255,0.18)';
+      ctx.beginPath();
+      ctx.ellipse(cx,cy,40,12,0,0,Math.PI*2);
+      ctx.ellipse(cx+26,cy+4,26,10,0,0,Math.PI*2);
+      ctx.ellipse(cx-26,cy+4,26,10,0,0,Math.PI*2);
+      ctx.fill();
+    }
+
+    // ground
+    const groundY = H*0.75;
+    ctx.fillStyle = '#3f5a2b';
+    ctx.fillRect(0,groundY,W,H-groundY);
+    ctx.fillStyle = '#537d34';
+    ctx.fillRect(0,groundY,W,10);
+
+    // trees
+    for(const tr of trees){
+      drawTree(tr.x, groundY, tr.scale, t);
+    }
+
+    // farmer character + crops
+    const charX = W*0.05, charY = groundY;
+    drawFarmer(charX, charY, t);
+    drawCrops(charX+60, groundY, t);
+  }
+
+  function drawTree(x, groundY, scale, t){
+    const sway = Math.sin(t*0.0012 + x)*4;
+    ctx.save();
+    ctx.translate(x, groundY);
+    ctx.scale(scale,scale);
+    ctx.fillStyle = '#5b3a22';
+    ctx.fillRect(-6,-40,12,40);
+    ctx.save();
+    ctx.translate(0,-40);
+    ctx.rotate(sway*0.01);
+    ctx.fillStyle = '#3f7a2e';
+    ctx.fillRect(-24,-40,48,40);
+    ctx.fillStyle = '#4a8f38';
+    ctx.fillRect(-18,-52,36,20);
+    ctx.restore();
+    ctx.restore();
+  }
+
+  function drawFarmer(x, groundY, t){
+    const swing = Math.sin(t*0.006);
+    ctx.save();
+    ctx.translate(x, groundY);
+    // legs
+    ctx.fillStyle = '#4a3a2a';
+    ctx.fillRect(-9,-30,7,30);
+    ctx.fillRect(2,-30,7,30);
+    // torso
+    ctx.fillStyle = '#6fae4a';
+    ctx.fillRect(-11,-58,22,30);
+    // straw hat + head
+    ctx.fillStyle = '#e8b98a';
+    ctx.fillRect(-8,-74,16,16);
+    ctx.fillStyle = '#d4a843';
+    ctx.beginPath();
+    ctx.ellipse(0,-76,13,4,0,0,Math.PI*2);
+    ctx.fill();
+    ctx.fillRect(-6,-84,12,10);
+    // back arm
+    ctx.fillStyle = '#588a3c';
+    ctx.fillRect(6,-56,6,20);
+    // swinging arm + hoe
+    ctx.save();
+    ctx.translate(-9,-54);
+    ctx.rotate(swing*0.5+0.2);
+    ctx.fillStyle = '#588a3c';
+    ctx.fillRect(-3,0,6,20);
+    ctx.save();
+    ctx.translate(0,20);
+    ctx.rotate(0.3);
+    ctx.fillStyle = '#8a5a2c';
+    ctx.fillRect(-2,0,4,22);
+    ctx.fillStyle = '#8f97a3';
+    ctx.fillRect(-9,20,18,5);
+    ctx.restore();
+    ctx.restore();
+    ctx.restore();
+  }
+
+  function drawCrops(x, groundY, t){
+    const cycle = 6000;
+    for(let i=0;i<cropCount;i++){
+      const cx = x + i*16;
+      const localT = (t + i*400) % cycle;
+      const growP = Math.min(localT/(cycle*0.7),1);
+      if(localT/cycle > 0.85){
+        if(Math.random()<0.06) spawn(cx, groundY-10, 4, ['#9de07a','#e9f78c'], {speed:0.6, life:500, size:2, grav:0.0005});
+        continue;
+      }
+      const h = 4+growP*16;
+      ctx.fillStyle = '#4a8f38';
+      ctx.fillRect(cx-2, groundY-h, 4, h);
+      ctx.fillStyle = '#6fbf4a';
+      ctx.fillRect(cx-5, groundY-h-4, 10, 6);
+    }
+  }
+
+  // ================= MAIN LOOP =================
+  function frame(now){
+    const t = (now - start) % TOTAL;
+    const dt = Math.min(now - (frame._last||now), 50);
+    frame._last = now;
+
+    ctx.clearRect(0,0,W,H);
+
+    if(t < T1){
+      drawCaveScene(t);
+    } else if(t < T2){
+      const p = (t-T1)/TRANS_MS;
+      drawCaveScene(t);
+      ctx.globalAlpha = p;
+      drawSurfaceScene(t, 0);
+      ctx.globalAlpha = 1;
+    } else if(t < T3){
+      const p = (t-T2)/SURF_MS;
+      drawSurfaceScene(t, p);
+    } else {
+      const p = (t-T3)/TRANS2_MS;
+      drawSurfaceScene(t, 1);
+      ctx.globalAlpha = p;
+      drawCaveScene(t);
+      ctx.globalAlpha = 1;
+    }
+
+    updateParticles(dt);
+    drawParticles();
+
+    requestAnimationFrame(frame);
+  }
+
+  resize();
+  if(reduceMotion){
+    drawCaveScene(0);
+  } else {
+    requestAnimationFrame(frame);
+  }
+})();
+
+/* =========================================================
+   QUIZ LOGIC
+   ========================================================= */
+(function(){
+  const modeLabelEl = document.getElementById('modeLabel');
+  const svg = document.getElementById('triangleSvg');
+  const inputsGrid = document.getElementById('inputsGrid');
+  const checkBtn = document.getElementById('checkBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const feedback = document.getElementById('feedback');
+  const streakEl = document.getElementById('streak');
+  const solvedEl = document.getElementById('solved');
+  const attemptedEl = document.getElementById('attempted');
+  const modebar = document.getElementById('modebar');
+
+  let selectedModeFilter = 'mixed';
+  let streak = 0, solved = 0, attempted = 0;
+  let current = null;
+
+  modebar.addEventListener('click', (e)=>{
+    const btn = e.target.closest('.mode-btn');
+    if(!btn) return;
+    [...modebar.children].forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedModeFilter = btn.dataset.mode;
+    newQuestion();
+  });
+
+  function rnd(min,max){ return Math.random()*(max-min)+min; }
+  function rndInt(min,max){ return Math.floor(rnd(min,max+1)); }
+  function round1(n){ return Math.round(n*10)/10; }
+  function round3(n){ return Math.round(n*1000)/1000; }
+
+  function generateMode1(){
+    const P = rndInt(100,1000);
+    const giveS = Math.random()<0.5;
+    let Q,S,PF;
+    if(!giveS){
+      Q = round1(rnd(0.2*P, 1.3*P));
+      S = Math.sqrt(P*P+Q*Q);
+      PF = P/S;
+      return {mode:1, given:{P,Q}, unknown:{S:round1(S), PF:round3(PF)}, givenKeys:['P','Q'], unknownKeys:['S','PF']};
+    } else {
+      const pfAssumed = rnd(0.55,0.97);
+      S = round1(P/pfAssumed);
+      Q = Math.sqrt(Math.max(S*S-P*P,0));
+      PF = P/S;
+      return {mode:1, given:{P,S}, unknown:{Q:round1(Q), PF:round3(PF)}, givenKeys:['P','S'], unknownKeys:['Q','PF']};
+    }
+  }
+
+  function generateMode2(){
+    const P = rndInt(100,1000);
+    const PF = round3(rnd(0.55,0.99));
+    const theta = Math.acos(PF);
+    const Q = P*Math.tan(theta);
+    const S = P/PF;
+    return {mode:2, given:{P,PF}, unknown:{Q:round1(Q), S:round1(S)}, givenKeys:['P','PF'], unknownKeys:['Q','S']};
+  }
+
+  function generateQuestion(){
+    let mode = selectedModeFilter;
+    if(mode==='mixed') mode = Math.random()<0.5 ? '1' : '2';
+    return mode==='1' ? generateMode1() : generateMode2();
+  }
+
+  const UNIT = {P:'kW', Q:'kVAR', S:'kVA', PF:''};
+  const LABELNAME = {P:'Real Power (P)', Q:'Reactive Power (Q)', S:'Apparent Power (S)', PF:'Power Factor (PF)'};
+
+  function fmtVal(key,val){
+    if(key==='PF') return val.toFixed(3);
+    return val.toFixed(1)+' '+UNIT[key];
+  }
+
+  function renderTriangle(q){
+    // Right triangle: base = P (bottom), vertical = Q (left), hypotenuse = S
+    const pad=40, baseY=180, leftX=60, rightX=280, topY=30;
+    const knownP = q.given.P!==undefined, knownQ = q.given.Q!==undefined, knownS = q.given.S!==undefined;
+    function sideLabel(key, x, y, anchor){
+      const isKnown = q.given[key]!==undefined;
+      const val = isKnown ? q.given[key] : (q.unknown[key]!==undefined ? '?' : null);
+      if(val===null) return '';
+      const display = isKnown ? fmtVal(key,val) : '?';
+      const color = isKnown ? '#8fa6bd' : '#ffcf4f';
+      return `<text x="${x}" y="${y}" fill="${color}" font-family="Share Tech Mono, monospace" font-size="14" text-anchor="${anchor}">${key}${key!=='PF'?'':''} = ${display}</text>`;
+    }
+    let pfText = '';
+    if(q.unknownKeys.includes('PF') || q.given.PF!==undefined){
+      const isKnown = q.given.PF!==undefined;
+      const val = isKnown ? fmtVal('PF',q.given.PF) : '?';
+      const color = isKnown ? '#8fa6bd':'#ffcf4f';
+      pfText = `<text x="${rightX-6}" y="${baseY-14}" fill="${color}" font-family="Share Tech Mono, monospace" font-size="13" text-anchor="end">PF = ${val}</text>`;
+    }
+
+    svg.innerHTML = `
+      <defs>
+        <linearGradient id="flow" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#4fd8ff" stop-opacity="0.9"/>
+          <stop offset="100%" stop-color="#ffcf4f" stop-opacity="0.9"/>
+        </linearGradient>
+      </defs>
+      <g opacity="0.25">
+        ${Array.from({length:8}).map((_,i)=>`<line x1="${20+i*38}" y1="10" x2="${20+i*38}" y2="210" stroke="#4fd8ff" stroke-width="0.5"/>`).join('')}
+      </g>
+      <line x1="${leftX}" y1="${baseY}" x2="${rightX}" y2="${baseY}" stroke="${knownP?'#4fd8ff':'#ffcf4f'}" stroke-width="3" stroke-linecap="round"/>
+      <line x1="${leftX}" y1="${baseY}" x2="${leftX}" y2="${topY}" stroke="${knownQ?'#4fd8ff':'#ffcf4f'}" stroke-width="3" stroke-linecap="round"/>
+      <line x1="${leftX}" y1="${topY}" x2="${rightX}" y2="${baseY}" stroke="url(#flow)" stroke-width="3" stroke-linecap="round" stroke-dasharray="6 5">
+        <animate attributeName="stroke-dashoffset" from="0" to="-22" dur="1s" repeatCount="indefinite"/>
+      </line>
+      <rect x="${leftX}" y="${baseY-14}" width="14" height="14" fill="none" stroke="#3a4a5f" stroke-width="1.5"/>
+      <circle cx="${leftX}" cy="${baseY}" r="4" fill="#4fd8ff"/>
+      <circle cx="${leftX}" cy="${topY}" r="4" fill="#4fd8ff"/>
+      <circle cx="${rightX}" cy="${baseY}" r="4" fill="#4fd8ff"/>
+      ${sideLabel('P',(leftX+rightX)/2,baseY+22,'middle')}
+      ${sideLabel('Q',leftX-10,(baseY+topY)/2,'end')}
+      ${sideLabel('S',(leftX+rightX)/2+30,(baseY+topY)/2-10,'start')}
+      ${pfText}
+    `;
+  }
+
+  function renderInputs(q){
+    inputsGrid.innerHTML = '';
+    q.unknownKeys.forEach(key=>{
+      const field = document.createElement('div');
+      field.className = 'field';
+      field.innerHTML = `
+        <label for="in-${key}">${LABELNAME[key]}${UNIT[key]?' — '+UNIT[key]:''}</label>
+        <input type="number" step="any" id="in-${key}" data-key="${key}" placeholder="Enter value" />
+      `;
+      inputsGrid.appendChild(field);
+    });
+  }
+
+  function setModeLabel(q){
+    if(q.mode===1){
+      modeLabelEl.textContent = `MODE 1 — GIVEN P & ${q.givenKeys.includes('Q')?'Q':'S'}, FIND ${q.unknownKeys.join(' & ')}`;
+    } else {
+      modeLabelEl.textContent = `MODE 2 — GIVEN P & PF, FIND Q & S`;
+    }
+  }
+
+  function newQuestion(){
+    current = generateQuestion();
+    setModeLabel(current);
+    renderTriangle(current);
+    renderInputs(current);
+    feedback.className = 'feedback';
+    feedback.innerHTML = '';
+    checkBtn.style.display = '';
+    nextBtn.style.display = 'none';
+    [...inputsGrid.querySelectorAll('input')].forEach(i=>{i.classList.remove('correct','wrong'); i.value='';});
+    const firstInput = inputsGrid.querySelector('input');
+    if(firstInput) setTimeout(()=>firstInput.focus(), 50);
+  }
+
+  function tolerance(key, correct){
+    if(key==='PF') return 0.01;
+    return Math.max(0.5, Math.abs(correct)*0.02);
+  }
+
+  function buildSteps(q){
+    const P = q.given.P;
+    if(q.mode===1 && q.givenKeys.includes('Q')){
+      const Q = q.given.Q, S = q.unknown.S, PF = q.unknown.PF;
+      return `Step 1 — Find S (Apparent Power):\n  S = \u221a(P\u00b2 + Q\u00b2) = \u221a(${P.toFixed(1)}\u00b2 + ${Q.toFixed(1)}\u00b2) = ${S.toFixed(1)} kVA\n\nStep 2 — Find PF (Power Factor):\n  PF = P / S = ${P.toFixed(1)} / ${S.toFixed(1)} = ${PF.toFixed(3)}`;
+    }
+    if(q.mode===1 && q.givenKeys.includes('S')){
+      const S = q.given.S, Q = q.unknown.Q, PF = q.unknown.PF;
+      return `Step 1 — Find Q (Reactive Power):\n  Q = \u221a(S\u00b2 - P\u00b2) = \u221a(${S.toFixed(1)}\u00b2 - ${P.toFixed(1)}\u00b2) = ${Q.toFixed(1)} kVAR\n\nStep 2 — Find PF (Power Factor):\n  PF = P / S = ${P.toFixed(1)} / ${S.toFixed(1)} = ${PF.toFixed(3)}`;
+    }
+    if(q.mode===2){
+      const PF = q.given.PF, theta = Math.acos(PF)*180/Math.PI, S = q.unknown.S, Q = q.unknown.Q;
+      return `Step 1 — Find the angle \u03b8:\n  \u03b8 = cos\u207b\u00b9(PF) = cos\u207b\u00b9(${PF.toFixed(3)}) = ${theta.toFixed(1)}\u00b0\n\nStep 2 — Find S (Apparent Power):\n  S = P / PF = ${P.toFixed(1)} / ${PF.toFixed(3)} = ${S.toFixed(1)} kVA\n\nStep 3 — Find Q (Reactive Power):\n  Q = P \u00d7 tan(\u03b8) = ${P.toFixed(1)} \u00d7 tan(${theta.toFixed(1)}\u00b0) = ${Q.toFixed(1)} kVAR`;
+    }
+  }
+
+  checkBtn.addEventListener('click', ()=>{
+    if(!current) return;
+    let allCorrect = true;
+    const inputs = [...inputsGrid.querySelectorAll('input')];
+    inputs.forEach(inp=>{
+      const key = inp.dataset.key;
+      const correct = current.unknown[key];
+      const val = parseFloat(inp.value);
+      const ok = !isNaN(val) && Math.abs(val-correct) <= tolerance(key,correct);
+      inp.classList.remove('correct','wrong');
+      inp.classList.add(ok?'correct':'wrong');
+      if(!ok) allCorrect = false;
+    });
+
+    attempted++;
+    attemptedEl.textContent = attempted;
+
+    if(allCorrect){
+      streak++; solved++;
+      streakEl.textContent = streak;
+      solvedEl.textContent = solved;
+      feedback.className = 'feedback show correct';
+      feedback.innerHTML = `<h3>&#9989; Correct!</h3>Nice work — the power triangle checks out.`;
+    } else {
+      streak = 0;
+      streakEl.textContent = streak;
+      const steps = buildSteps(current);
+      const answerList = current.unknownKeys.map(k=>`${LABELNAME[k]}: ${fmtVal(k, current.unknown[k])}`).join(' | ');
+      feedback.className = 'feedback show wrong';
+      feedback.innerHTML = `<h3>&#10060; Not quite</h3>Correct answer(s): ${answerList}<div class="steps">${steps}</div>`;
+    }
+
+    checkBtn.style.display = 'none';
+    nextBtn.style.display = '';
+  });
+
+  nextBtn.addEventListener('click', newQuestion);
+
+  newQuestion();
+})();
+</script>
+</body>
+</html>
